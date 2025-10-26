@@ -4,6 +4,9 @@ from app.schemas import AskRequest, AskAnswer
 from app.ingest import ingest_upload
 from app.rag import search_similar
 from app.prompts import SYSTEM_VI, build_user_prompt_vi
+from app import students
+app.include_router(students.router)
+
 
 USE_GROQ = bool(os.getenv("GROQ_API_KEY"))
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")

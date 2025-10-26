@@ -27,45 +27,27 @@ def api_upload_file(file_tuple) -> Dict:
 
 # ====== LLM client tại WebApp (tạo 'câu hỏi thảo luận') ======
 def llm_synthesize_from_questions(questions: List[str]) -> str:
-    """
-    Sinh 'Câu hỏi thảo luận' từ danh sách 10 câu hỏi nhỏ (tiếng Việt).
-    Ưu tiên Groq; fallback OpenAI nếu đặt LLM_PROVIDER=openai.
-    """
+    """Sinh câu hỏi thảo luận + hướng dẫn bằng AI"""
     provider = os.getenv("LLM_PROVIDER", "groq").lower().strip()
     sys_prompt = (
-        "Bạn là trợ lý học thuật tiếng Việt trong lĩnh vực Dân tộc học. "
-        "Dựa trên 10 câu hỏi nhỏ đã nêu, hãy tạo **một câu hỏi thảo luận tổng hợp duy nhất**, "
-        "yêu cầu người học **tư duy phản biện, liên hệ thực tiễn hoặc so sánh đối chiếu**. "
-        "Chỉ **một câu**, **rõ ràng**, **không trùng lặp** với các câu hỏi nhỏ. Trả lời bằng **tiếng Việt**."
+        "Bạn là giảng viên dân tộc học. Hãy tổng hợp 10 câu hỏi nhỏ của sinh viên "
+        "thành 1 câu hỏi thảo luận duy nhất, rõ nghĩa, chuẩn ngữ pháp, văn phong học thuật. "
+        "Sau đó thêm phần 'Hướng dẫn' ngắn gọn để sinh viên biết cách triển khai trả lời."
     )
     user_prompt = "Danh sách 10 câu hỏi nhỏ:\n" + "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
-
     try:
-        if provider == "groq":
-            from groq import Groq
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.4, max_tokens=180, top_p=0.9
-            )
-            return resp.choices[0].message.content.strip()
-        else:
-            from openai import OpenAI
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            chat = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.4, max_tokens=180, top_p=0.9
-            )
-            return chat.choices[0].message.content.strip()
+        from groq import Groq
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4, max_tokens=300
+        )
+        return resp.choices[0].message.content.strip()
     except Exception as e:
         return f"(Không thể sinh câu hỏi thảo luận lúc này: {e})"
+

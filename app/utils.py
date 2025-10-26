@@ -1,51 +1,47 @@
-import os, re
-import fitz  # PyMuPDF
-from docx import Document
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
 
-MIN_CHARS, MAX_CHARS = 400, 900
-_vi_diac = re.compile(r"[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]")
+def send_discussion_email(student_name: str, student_email: str, discussion_question: str):
+    """Gửi email thảo luận tới học viên"""
+    sender = os.getenv("SMTP_USER", "ntquy@dthu.edu.vn")
+    password = os.getenv("SMTP_PASS", "")
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
 
-def looks_vietnamese(text: str) -> bool:
-    return bool(_vi_diac.search((text or "").lower()))
+    subject = "Câu hỏi thảo luận từ ViCulture-AI"
+    body = f"""
+Chào Anh/Chị: {student_name},
 
-def chunkify(text: str):
-    lines = [ln.strip() for ln in (text or "").split("\n") if ln.strip()]
-    chunks, buf = [], ""
-    for ln in lines:
-        if len(buf) + 1 + len(ln) <= MAX_CHARS:
-            buf = (buf + " " + ln).strip()
-        else:
-            if len(buf) >= MIN_CHARS:
-                chunks.append(buf)
-            buf = ln
-    if len(buf) >= MIN_CHARS:
-        chunks.append(buf)
-    return chunks or ([text] if text.strip() else [])
+Sau khi nhận được 10 câu hỏi của anh/chị, hệ thống đưa ra câu hỏi thảo luận để anh/chị làm như sau:
 
-def read_pdf(path: str):
-    out = []
-    doc = fitz.open(path)
-    for page_num, page in enumerate(doc, start=1):
-        text = (page.get_text("text") or "").strip()
-        if not text:
-            continue
-        for ch in chunkify(text):
-            out.append((ch, page_num))
-    return out
+"{discussion_question}"
 
-def read_docx(path: str):
-    doc = Document(path)
-    txt = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-    return [(ch, None) for ch in chunkify(txt)]
+Hướng dẫn:
+- Trả lời bằng văn phong khoa học, có dẫn chứng từ thực tiễn dân tộc học.
+- Liên hệ với tài liệu hoặc trải nghiệm thực tế.
+- Dung lượng đề xuất: 300–500 từ.
 
-def read_txt(path: str):
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        txt = f.read()
-    return [(ch, None) for ch in chunkify(txt)]
+Chúc các anh/chị làm bài tốt.
 
-def extract_chunks(path: str):
-    ext = os.path.splitext(path)[1].lower()
-    if ext == ".pdf":  return read_pdf(path)
-    if ext == ".docx": return read_docx(path)
-    if ext == ".txt":  return read_txt(path)
-    return []
+Trân trọng,
+ViCulture-AI
+"""
+
+    msg = MIMEMultipart()
+    msg["From"] = sender
+    msg["To"] = student_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.sendmail(sender, student_email, msg.as_string())
+        print(f"✅ Email đã gửi đến {student_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Lỗi gửi email: {e}")
+        return False

@@ -240,3 +240,13 @@ if st.session_state["role"] == "Student":
                 st.error(res.json().get("detail", "Đổi mật khẩu thất bại."))
         except Exception as e:
             st.error(f"Lỗi: {e}")
+
+# 🟢 Thêm dòng này ở cuối file
+st.markdown("---")
+st.markdown(
+    "<p style='text-align:center; color:gray; font-size:0.9rem;'>"
+    "Được xây dựng và phát triển bởi <b>TS. Nguyễn Thuận Quý</b>"
+    "</p>",
+    unsafe_allow_html=True
+)
+

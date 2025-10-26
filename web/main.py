@@ -152,15 +152,32 @@ with tabs[2]:
     st.subheader("🧩 Sinh 'Câu hỏi thảo luận' sau 10 câu hỏi nhỏ")
     q_list: List[str] = st.session_state.get("q_history", [])
     if len(q_list) < 10:
-        st.warning("Cần ít nhất **10 câu hỏi nhỏ**. Vui lòng thêm tại tab '🧪 10 câu hỏi nhỏ'.")
+        st.warning("Cần ít nhất **10 câu hỏi nhỏ**.")
     else:
-        if st.button("✨ Tạo câu hỏi thảo luận (từ 10 câu trên)", type="primary"):
+        name = st.text_input("Tên học viên:")
+        email = st.text_input("Email học viên:")
+        if st.button("✨ Tạo & Gửi câu hỏi thảo luận", type="primary"):
+            st.info("Đang tạo câu hỏi thảo luận bằng AI...")
             result = llm_synthesize_from_questions(q_list[:10])
-            st.session_state["discussion_q"] = result or "(Không tạo được câu hỏi thảo luận.)"
+            st.session_state["discussion_q"] = result
+            st.success("✅ Đã tạo câu hỏi thảo luận.")
+            st.markdown("#### 📘 Câu hỏi được tạo")
+            st.write(result)
 
-        if st.session_state.get("discussion_q"):
-            st.markdown("#### ✅ Câu hỏi thảo luận được tạo")
-            st.write(st.session_state["discussion_q"])
+            if email and name:
+                try:
+                    res = requests.post(
+                        f"{API_BASE_URL}/students/notify-discussion",
+                        params={"name": name, "email": email, "question": result},
+                        timeout=30
+                    )
+                    if res.ok:
+                        st.success(f"📬 Đã gửi email thảo luận tới {email}")
+                    else:
+                        st.error("⚠️ Gửi email thất bại.")
+                except Exception as e:
+                    st.error(f"Lỗi khi gửi email: {e}")
+
 
 # ------------------ TAB 4: ADMIN ------------------
 with tabs[3]:

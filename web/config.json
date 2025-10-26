@@ -1,0 +1,6 @@
+{
+  "site_title": "ViCulture-AI — Dân tộc học",
+  "admin_password": "admin@123",
+  "welcome_text": "Chào mừng đến với ViCulture-AI. Hỏi đáp tiếng Việt dựa trên tài liệu do tác giả upload.",
+  "default_top_k": 3
+}

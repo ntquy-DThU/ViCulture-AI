@@ -1,24 +1,26 @@
 services:
+  # ... (giữ nguyên service API FastAPI đang dùng)
+
   - type: web
-    name: ethnoai
-    env: docker
+    name: viculture-ai-web
+    env: python
     plan: starter
-    autoDeploy: true
-    healthCheckPath: /health
+    buildCommand: pip install -r web/requirements.txt
+    startCommand: streamlit run web/main.py --server.port 10000 --server.address 0.0.0.0
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ethnoai-db
-          property: connectionString
+      - key: API_BASE_URL
+        # Điền URL public của API FastAPI (ví dụ):
+        value: https://viculture-ai.onrender.com
       - key: GROQ_API_KEY
         sync: false
+      - key: LLM_PROVIDER
+        value: groq
       - key: GROQ_MODEL
         value: llama-3.1-8b-instant
-      # Nếu dùng OpenAI thì thêm:
+      # Nếu bạn muốn dùng OpenAI thay vì Groq, thêm:
       # - key: OPENAI_API_KEY
       #   sync: false
+      # - key: LLM_PROVIDER
+      #   value: openai
       # - key: OPENAI_MODEL
       #   value: gpt-4o-mini
-databases:
-  - name: ethnoai-db
-    plan: starter

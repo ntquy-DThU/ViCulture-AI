@@ -1,7 +1,10 @@
-import os, json, io
+import os, json, io, time, requests
 import streamlit as st
 from typing import List
 from utils_ui import api_health, api_ask, api_upload_file, llm_synthesize_from_questions
+
+# ====== Thiết lập API backend ======
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 
 # ====== Tải cấu hình ======
 CFG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
@@ -48,6 +51,7 @@ if "discussion_q" not in st.session_state:
 # ====== Sidebar – Đăng nhập vai trò ======
 st.sidebar.title("🔑 Đăng nhập")
 role = st.sidebar.radio("Chọn vai trò:", ["Student", "Admin"], index=0)
+
 if role == "Admin":
     pw = st.sidebar.text_input("Mật khẩu Admin", type="password")
     if st.sidebar.button("Đăng nhập Admin", use_container_width=True):
@@ -68,17 +72,21 @@ if st.session_state["logged_in"]:
     if st.sidebar.button("🚪 Đăng xuất", use_container_width=True):
         for k in ["role", "logged_in", "q_history", "discussion_q"]:
             st.session_state.pop(k, None)
+        time.sleep(0.3)
         st.rerun()
 
 # ====== Kiểm tra API backend ======
 api_ok = api_health()
 st.sidebar.markdown("### Trạng thái API")
 st.sidebar.write("🟢 Sẵn sàng" if api_ok else "🔴 Không kết nối được")
-st.sidebar.caption(f"API_BASE_URL = {os.getenv('API_BASE_URL', '') or '(chưa đặt)'}")
+st.sidebar.caption(f"API_BASE_URL = {API_BASE_URL or '(chưa đặt)'}")
 
 if not st.session_state.get("logged_in"):
     st.info("Vui lòng đăng nhập để sử dụng ứng dụng.")
     st.stop()
+
+if not api_ok:
+    st.warning("⚠️ API backend chưa sẵn sàng. Vui lòng kiểm tra FastAPI server.")
 
 # ====== Tabs chính ======
 tabs = st.tabs(["💬 Hỏi KB", "🧪 10 câu hỏi nhỏ", "🧩 Câu hỏi thảo luận", "⚙️ Admin"])
@@ -159,7 +167,7 @@ with tabs[3]:
     if st.session_state["role"] != "Admin":
         st.error("Khu vực dành cho Admin.")
     else:
-        st.subheader("⚙️ Quản trị")
+        st.subheader("⚙️ Quản trị hệ thống")
         st.markdown("**📤 Upload tài liệu vào Kho Tri Thức** (PDF / DOCX / TXT)")
         up = st.file_uploader("Chọn file", type=["pdf", "docx", "txt"])
         if up and st.button("Tải lên KB"):
@@ -175,3 +183,43 @@ with tabs[3]:
         st.markdown("---")
         st.markdown("**🔐 Đổi mật khẩu Admin (cập nhật file `web/config.json`)**")
         st.caption("Để bảo mật, hãy commit & deploy lại sau khi đổi.")
+
+        st.markdown("---")
+        st.subheader("📋 Import danh sách học viên (Excel)")
+        st.caption("File phải có cột: Họ tên | Email | Mã SV")
+        up_students = st.file_uploader("Chọn file Excel (.xlsx)", type=["xlsx"])
+        if up_students and st.button("Import danh sách học viên"):
+            if not up_students.name.endswith(".xlsx"):
+                st.error("Vui lòng chọn file Excel (.xlsx) hợp lệ.")
+            else:
+                try:
+                    res = requests.post(
+                        f"{API_BASE_URL}/students/import",
+                        files={"file": (up_students.name, up_students.getvalue(), up_students.type)},
+                    )
+                    if res.ok:
+                        st.success(f"✅ Đã import {res.json().get('imported', 0)} học viên thành công.")
+                    else:
+                        st.error(res.json().get("detail", "Lỗi khi import học viên."))
+                except Exception as e:
+                    st.error(f"Lỗi khi import: {e}")
+
+# ------------------ TAB STUDENT ACCOUNT ------------------
+if st.session_state["role"] == "Student":
+    st.markdown("---")
+    st.subheader("👤 Đổi mật khẩu học viên")
+    email = st.text_input("Email đăng nhập:")
+    old_pw = st.text_input("Mật khẩu cũ:", type="password")
+    new_pw = st.text_input("Mật khẩu mới:", type="password")
+    if st.button("Đổi mật khẩu"):
+        try:
+            res = requests.post(
+                f"{API_BASE_URL}/students/change-password",
+                params={"email": email, "old_pass": old_pw, "new_pass": new_pw},
+            )
+            if res.ok:
+                st.success("✅ Đổi mật khẩu thành công.")
+            else:
+                st.error(res.json().get("detail", "Đổi mật khẩu thất bại."))
+        except Exception as e:
+            st.error(f"Lỗi: {e}")

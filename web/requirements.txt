@@ -15,5 +15,3 @@ groq==0.10.0
 fastapi
 streamlit
 requests
-python-docx
-PyPDF2>=3.0.1

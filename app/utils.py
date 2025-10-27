@@ -95,3 +95,28 @@ ViCulture-AI
     except Exception as e:
         print(f"❌ Lỗi khi gửi email tới {student_email}: {e}")
         return False
+# app/utils.py
+
+def extract_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+    """
+    Chia văn bản thành các đoạn (chunks) có kích thước cố định, cho phép chồng lấn.
+    
+    Args:
+        text: Văn bản đầu vào.
+        chunk_size: Số ký tự tối đa mỗi đoạn.
+        overlap: Số ký tự chồng lấn giữa các đoạn.
+    
+    Returns:
+        Danh sách các đoạn văn bản.
+    """
+    if not text:
+        return []
+    
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start = end - overlap if overlap < chunk_size else end
+    return chunks

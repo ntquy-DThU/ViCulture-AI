@@ -17,3 +17,4 @@ streamlit
 requests
 python-docx
 PyPDF2>=3.0.1
+werkzeug>=3.0.0
